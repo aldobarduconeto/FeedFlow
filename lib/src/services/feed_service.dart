@@ -149,6 +149,21 @@ class FeedService extends ChangeNotifier {
     await _persist();
   }
 
+  Future<void> saveReadingProgress(FeedItem item, double progress) async {
+    await _load();
+    final index = _items.indexWhere((savedItem) => savedItem.id == item.id);
+    if (index == -1) return;
+    final normalizedProgress = progress.clamp(0.0, 1.0).toDouble();
+    final currentProgress = _items[index].readingProgress ?? 0;
+    if ((normalizedProgress - currentProgress).abs() < 0.02 &&
+        normalizedProgress < 1) {
+      return;
+    }
+    _items[index] = _items[index].copyWith(readingProgress: normalizedProgress);
+    await _persist();
+    notifyListeners();
+  }
+
   Future<void> toggleRead(FeedItem item) async {
     await _updateItemFlag(item, isRead: !item.isRead);
   }
@@ -302,6 +317,7 @@ class FeedService extends ChangeNotifier {
               isRead: previous.isRead,
               isFavorite: previous.isFavorite,
               playbackPosition: previous.playbackPosition,
+              readingProgress: previous.readingProgress,
               downloadedAudioPath: previous.downloadedAudioPath,
             );
       if (index == null) {

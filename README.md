@@ -19,16 +19,18 @@ autenticação nem sincroniza os dados entre dispositivos.
   até dez publicações recentes por feed para calcular a ordenação e exibe até
   três no cartão; seguir uma fonte é uma ação explícita do usuário.
 - Atualização das sugestões ao abrir o app, ao usar **Configurações > Dados**
-  e a cada 30 minutos enquanto a sessão está ativa e Explorar não está no modo
-  **Seguindo**. O temporizador é suspenso em segundo plano e no modo
-  **Seguindo**. O horário da última consulta concluída aparece em destaque.
+  e a cada 30 minutos enquanto o aplicativo está em primeiro plano. O
+  temporizador é suspenso em segundo plano. A última consulta concluída aparece em destaque.
 - Ordenação das sugestões por **Mais novos** (data de publicação mais recente)
   ou **Mais atualizados** (maior número de publicações nos últimos 30 dias,
   considerando até dez itens recentes de cada RSS).
 - Filtros de notícias, tecnologia, ciência e podcasts, busca de fontes e opção
   de adicionar qualquer feed RSS ou Atom por URL.
-- Lista de fontes seguidas e episódios de podcast na própria aba **Explorar**,
-  além da opção de adicionar uma URL RSS personalizada.
+- Lista de fontes seguidas, artigos e episódios na aba **Inscrições**, além da
+  opção de adicionar uma URL RSS personalizada.
+- Tela **Início** com artigos e episódios que têm progresso salvo em
+  **Continue de onde parou** e itens recentes ainda não abertos em **Atualizações**. A lista
+  completa de fontes e publicações fica na aba **Inscrições**.
 - Atualização dos feeds cadastrados ao iniciar o app e ao solicitar uma
   recarga manual.
 - Recarga manual de feeds seguidos e sugestões centralizada em
@@ -38,7 +40,7 @@ autenticação nem sincroniza os dados entre dispositivos.
   grandes e na orientação horizontal, navegação por drawer e conteúdo central
   com largura limitada para melhor aproveitamento do espaço.
 - Identificação de episódios com áudio e download no armazenamento privado do
-  aplicativo, disponível nas telas **Início** e **Explorar > Seguindo**. Depois
+  aplicativo, disponível nas telas **Início** e **Inscrições**. Depois
   de baixado, o player usa o arquivo local para reprodução offline.
 - Reprodução de podcasts online ou baixados, com controles de play/pause,
   busca na posição e retomada do ponto salvo.
@@ -81,21 +83,24 @@ as informações locais.
 2. Abra **Explorar** pelo menu inferior no celular em retrato ou pelo drawer em
    telas largas e na orientação paisagem. Escolha uma sugestão e toque em
    **Seguir**, ou use **Adicionar por URL** para informar um feed personalizado.
+   Consulte sua lista completa de fontes e publicações em **Inscrições**.
 3. Informe a URL completa `http://` ou `https://` do feed e escolha uma
    categoria. A fonte só é salva depois que o FeedFlow consegue carregar e
    interpretar o RSS ou Atom.
-4. Consulte artigos e episódios na tela inicial. Para buscar novidades de suas
-   fontes e do catálogo de sugestões, use
+4. Na tela **Início**, retome artigos e episódios com progresso salvo ou
+   confira **Atualizações** para ver os itens recentes ainda não abertos. A aba
+   **Inscrições** reúne as fontes e suas publicações. Para buscar novidades de
+   suas fontes e do catálogo de sugestões, use
    **Configurações > Dados > Recarregar dados**.
-5. Na aba **Explorar**, abra **Seguindo** para encontrar suas fontes e episódios
-   de podcast; use os botões para baixar episódios para ouvir offline ou para
-   reproduzir, pausar, avançar e retomar. Na tela inicial, episódios com áudio
-   também podem ser baixados.
+5. Na aba **Inscrições**, encontre as fontes seguidas e suas publicações; use os
+   botões dos episódios para baixar e ouvir offline ou para reproduzir, pausar,
+   avançar e retomar. Na tela inicial, episódios com áudio também podem ser
+   baixados.
 
 O catálogo **Explorar** reúne sugestões de fontes RSS definidas no aplicativo e
 consulta o conteúdo atual desses feeds; a lista de fontes recomendadas não é
-gerada por um serviço remoto. A opção **Seguindo** dentro de Explorar mostra
-apenas as fontes que você adicionou à sua conta local. O app não cria artigos de
+gerada por um serviço remoto. A aba **Inscrições** mostra apenas as fontes que
+você adicionou à sua conta local. O app não cria artigos de
 demonstração. Fontes fora do catálogo podem ser incluídas por **Adicionar por
 URL**.
 
@@ -103,11 +108,10 @@ URL**.
 
 - Ao abrir o aplicativo, a tela **Explorar** consulta as sugestões RSS.
 - Use **Configurações > Dados > Recarregar dados** para atualizar manualmente
-  as fontes seguidas e as sugestões. A consulta automática do catálogo ocorre a
-  cada 30 minutos durante a sessão, desde que Explorar não esteja no modo
-  **Seguindo**; ela também é suspensa quando o app vai para segundo plano. A
-  atualização automática das fontes seguidas ocorre ao iniciar o app ou por
-  essa recarga manual.
+  as fontes seguidas e as sugestões. A consulta automática do catálogo ocorre
+  a cada 30 minutos enquanto o aplicativo está em primeiro plano e também
+  quando ele volta do segundo plano. A atualização das fontes seguidas ocorre
+  ao iniciar o app ou por essa recarga manual.
 - O destaque **Última atualização** indica quando a consulta ao catálogo foi
   concluída. Cada cartão também mostra a data da publicação mais recente
   disponível no feed, quando o RSS fornece essa informação.
@@ -129,12 +133,12 @@ URL**.
 - `lib/src/models/feed_source.dart`: modelo das fontes.
 - `lib/src/models/feed.dart`: modelo dos artigos e episódios.
 - `lib/src/views/auth_page.dart`: telas de cadastro e login.
-- `lib/src/views/explore.dart`: catálogo **Explorar** e lista **Seguindo**, com
+- `lib/src/views/explore.dart`: catálogo dinâmico **Explorar**, com
   fontes e episódios de podcast.
 - `lib/src/views/settings.dart`: preferências, perfil, ID da conta, recarga dos
   dados e saída da conta.
 - `lib/src/views/home.dart`: artigos, episódios e gerenciamento das fontes.
-
+- `lib/src/views/home.dart`: painéis **Continue de onde parou** e **Atualizações**.
 ## Executar
 
 Requer Flutter instalado e as dependências resolvidas:

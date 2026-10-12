@@ -16,6 +16,189 @@ class HomePage extends StatelessWidget {
     required this.podcastPlayer,
     required this.isReloadingData,
     required this.onReloadData,
+    super.key,
+  });
+
+  final FeedService feedService;
+  final PodcastPlayerService podcastPlayer;
+  final bool isReloadingData;
+  final Future<void> Function() onReloadData;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: feedService,
+      builder: (context, _) {
+        final items = feedService.items;
+        final sources = {
+          for (final source in feedService.sources) source.id: source,
+        };
+        final continuing = items.where((item) {
+          if (!item.isPodcast) {
+            final progress = item.readingProgress ?? 0;
+            return progress > 0 && progress < 1;
+          }
+          final position = item.playbackPosition;
+          final duration = item.audioDuration;
+          return position != null &&
+              position > Duration.zero &&
+              (duration == null || position < duration);
+        }).toList();
+        final continuingIds = continuing.map((item) => item.id).toSet();
+        final updates = items
+            .where((item) => !item.isRead && !continuingIds.contains(item.id))
+            .toList();
+        return SafeArea(
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Início',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Recarregar dados',
+                    onPressed: isReloadingData ? null : onReloadData,
+                    icon: isReloadingData
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync_rounded),
+                  ),
+                ],
+              ),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: Text(
+                  'Retome seus conteúdos e veja as novidades.',
+                  style: TextStyle(color: FeedFlowColors.textSecondary),
+                ),
+              ),
+              if (feedService.isRefreshing)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8, bottom: 12),
+                  child: LinearProgressIndicator(),
+                ),
+              if (feedService.startupError case final error?)
+                _ErrorCard(message: error),
+              for (final error in feedService.refreshErrors.entries)
+                _ErrorCard(
+                  message:
+                      'Falha ao atualizar '
+                      '${sources[error.key]?.title ?? 'uma fonte'}: '
+                      '${error.value}',
+                ),
+              const SizedBox(height: 16),
+              const _ContentSectionHeader(
+                title: 'Continue de onde parou',
+                subtitle: 'Artigos e podcasts com progresso salvo',
+              ),
+              if (continuing.isEmpty)
+                const _EmptySectionMessage(
+                  message:
+                      'Seus artigos e episódios em andamento aparecerão aqui.',
+                )
+              else
+                for (final item in continuing)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _FeedItemCard(
+                      item: item,
+                      source: sources[item.feedId],
+                      feedService: feedService,
+                      podcastPlayer: podcastPlayer,
+                    ),
+                  ),
+              const SizedBox(height: 20),
+              _ContentSectionHeader(
+                title: 'Atualizações',
+                subtitle: updates.isEmpty
+                    ? 'Você já abriu todas as novidades.'
+                    : 'Conteúdos recentes que você ainda não abriu',
+              ),
+              if (updates.isEmpty)
+                const _EmptySectionMessage(
+                  message: 'Novas publicações aparecerão aqui após a recarga.',
+                )
+              else
+                for (final item in updates)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _FeedItemCard(
+                      item: item,
+                      source: sources[item.feedId],
+                      feedService: feedService,
+                      podcastPlayer: podcastPlayer,
+                    ),
+                  ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ContentSectionHeader extends StatelessWidget {
+  const _ContentSectionHeader({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: const TextStyle(color: FeedFlowColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptySectionMessage extends StatelessWidget {
+  const _EmptySectionMessage({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 12),
+      child: Text(
+        message,
+        style: const TextStyle(color: FeedFlowColors.textSecondary),
+      ),
+    );
+  }
+}
+
+class SubscriptionsPage extends StatelessWidget {
+  const SubscriptionsPage({
+    required this.feedService,
+    required this.podcastPlayer,
+    required this.isReloadingData,
+    required this.onReloadData,
     required this.onDiscover,
     super.key,
   });
@@ -43,7 +226,7 @@ class HomePage extends StatelessWidget {
                 children: [
                   const Expanded(
                     child: Text(
-                      'Seu feed',
+                      'Inscrições',
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
@@ -187,7 +370,7 @@ class _EmptyFeed extends StatelessWidget {
             ),
             TextButton(
               onPressed: onDiscover,
-              child: const Text('Ver fontes seguidas'),
+              child: const Text('Explorar fontes'),
             ),
           ],
         ],
@@ -278,11 +461,16 @@ class _FeedItemCard extends StatelessWidget {
     return Card(
       child: ListTile(
         onTap: () async {
+          if (item.isPodcast) return;
           if (!item.isRead) await feedService.toggleRead(item);
-          if (!context.mounted || item.isPodcast) return;
+          if (!context.mounted) return;
           await Navigator.of(context).push<void>(
             MaterialPageRoute<void>(
-              builder: (_) => ArticleReaderPage(item: item, source: source),
+              builder: (_) => ArticleReaderPage(
+                item: item,
+                source: source,
+                feedService: feedService,
+              ),
             ),
           );
         },
@@ -320,10 +508,21 @@ class _FeedItemCard extends StatelessWidget {
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 6),
-          child: Text(
-            '$details${item.description == null ? '' : '\n${item.description}'}',
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$details${item.description == null ? '' : '\n${item.description}'}',
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (!item.isPodcast &&
+                  (item.readingProgress ?? 0) > 0 &&
+                  (item.readingProgress ?? 0) < 1) ...[
+                const SizedBox(height: 8),
+                LinearProgressIndicator(value: item.readingProgress),
+              ],
+            ],
           ),
         ),
         isThreeLine: item.description != null,
@@ -331,7 +530,13 @@ class _FeedItemCard extends StatelessWidget {
             ? Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  PodcastPlayButton(item: item, player: podcastPlayer),
+                  PodcastPlayButton(
+                    item: item,
+                    player: podcastPlayer,
+                    onPlay: item.isRead
+                        ? null
+                        : () => feedService.toggleRead(item),
+                  ),
                   PodcastDownloadButton(item: item, feedService: feedService),
                 ],
               )

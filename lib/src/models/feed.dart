@@ -1,4 +1,4 @@
-enum FeedType {article, podcast}
+enum FeedType { article, podcast }
 
 class FeedItem {
   final String id;
@@ -16,6 +16,7 @@ class FeedItem {
   final String? audioUrl;
   final Duration? audioDuration;
   final Duration? playbackPosition;
+  final double? readingProgress;
   final DateTime? updatedAt;
   final String? downloadedAudioPath;
 
@@ -35,6 +36,7 @@ class FeedItem {
     this.audioUrl,
     this.audioDuration,
     this.playbackPosition,
+    this.readingProgress,
     this.updatedAt,
     this.downloadedAudioPath,
   });
@@ -42,7 +44,8 @@ class FeedItem {
   bool get isPodcast => type == FeedType.podcast;
   bool get hasAudio => audioUrl != null && audioUrl!.isNotEmpty;
   bool get hasImage => imageUrl != null && imageUrl!.isNotEmpty;
-  bool get hasPlaybackPosition => playbackPosition != null && playbackPosition! > Duration.zero;
+  bool get hasPlaybackPosition =>
+      playbackPosition != null && playbackPosition! > Duration.zero;
 
   FeedItem copyWith({
     String? id,
@@ -60,6 +63,7 @@ class FeedItem {
     String? audioUrl,
     Duration? audioDuration,
     Duration? playbackPosition,
+    double? readingProgress,
     DateTime? updatedAt,
     String? downloadedAudioPath,
   }) {
@@ -79,6 +83,7 @@ class FeedItem {
       audioUrl: audioUrl ?? this.audioUrl,
       audioDuration: audioDuration ?? this.audioDuration,
       playbackPosition: playbackPosition ?? this.playbackPosition,
+      readingProgress: readingProgress ?? this.readingProgress,
       updatedAt: updatedAt ?? this.updatedAt,
       downloadedAudioPath: downloadedAudioPath ?? this.downloadedAudioPath,
     );
@@ -101,6 +106,7 @@ class FeedItem {
       'audioUrl': audioUrl,
       'audioDurationMs': audioDuration?.inMilliseconds,
       'playbackPositionMs': playbackPosition?.inMilliseconds,
+      'readingProgress': readingProgress,
       'updatedAt': updatedAt?.toIso8601String(),
       'downloadedAudioPath': downloadedAudioPath,
     };
@@ -130,13 +136,14 @@ class FeedItem {
           ? Duration(milliseconds: (map['audioDurationMs'] as num).toInt())
           : null,
       playbackPosition: map['playbackPositionMs'] != null
-          ? Duration(milliseconds:(map['playbackPositionMs'] as num).toInt())
+          ? Duration(milliseconds: (map['playbackPositionMs'] as num).toInt())
           : null,
+      readingProgress: (map['readingProgress'] as num?)?.toDouble(),
       updatedAt: map['updatedAt'] != null
           ? DateTime.tryParse(map['updatedAt'] as String)
           : null,
       downloadedAudioPath: map['downloadedAudioPath'] as String?,
     );
   }
-  static const FeedItem empty = FeedItem(id: '', feedId: '',title: '',);
+  static const FeedItem empty = FeedItem(id: '', feedId: '', title: '');
 }

@@ -10,11 +10,13 @@ class PodcastPlayButton extends StatelessWidget {
   const PodcastPlayButton({
     required this.item,
     required this.player,
+    this.onPlay,
     super.key,
   });
 
   final FeedItem item;
   final PodcastPlayerService player;
+  final Future<void> Function()? onPlay;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,7 @@ class PodcastPlayButton extends StatelessWidget {
               ? null
               : () async {
                   try {
+                    await onPlay?.call();
                     await player.toggle(item);
                   } catch (error) {
                     if (context.mounted) {

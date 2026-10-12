@@ -237,6 +237,11 @@ class _AppState extends State<App> {
                         label: Text('Início'),
                       ),
                       const NavigationDrawerDestination(
+                        icon: Icon(Icons.subscriptions_outlined),
+                        selectedIcon: Icon(Icons.subscriptions),
+                        label: Text('Inscrições'),
+                      ),
+                      const NavigationDrawerDestination(
                         icon: Icon(Icons.explore_outlined),
                         selectedIcon: Icon(Icons.explore),
                         label: Text('Explorar'),
@@ -245,26 +250,6 @@ class _AppState extends State<App> {
                         icon: Icon(Icons.settings_outlined),
                         selectedIcon: Icon(Icons.settings),
                         label: Text('Configurações'),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Divider(),
-                      ),
-                      ListTile(
-                        leading: _isReloadingData
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.sync_rounded),
-                        title: const Text('Recarregar dados'),
-                        enabled: !_isReloadingData,
-                        onTap: _isReloadingData
-                            ? null
-                            : _reloadDataFromNavigation,
                       ),
                     ],
                   ),
@@ -288,13 +273,18 @@ class _AppState extends State<App> {
                                 podcastPlayer: podcastPlayer,
                                 isReloadingData: _isReloadingData,
                                 onReloadData: _reloadDataFromNavigation,
+                              ),
+                              SubscriptionsPage(
+                                feedService: feedService,
+                                podcastPlayer: podcastPlayer,
+                                isReloadingData: _isReloadingData,
+                                onReloadData: _reloadDataFromNavigation,
                                 onDiscover: () =>
-                                    setState(() => _currentIndex = 1),
+                                    setState(() => _currentIndex = 2),
                               ),
                               ExplorePage(
                                 feedService: feedService,
                                 suggestionService: _suggestionService!,
-                                podcastPlayer: podcastPlayer,
                                 isReloadingData: _isReloadingData,
                                 onReloadData: _reloadDataFromNavigation,
                               ),
@@ -325,6 +315,10 @@ class _AppState extends State<App> {
                     BottomNavigationBarItem(
                       icon: Icon(Icons.home),
                       label: 'Início',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(Icons.subscriptions),
+                      label: 'Inscrições',
                     ),
                     BottomNavigationBarItem(
                       icon: Icon(Icons.explore),
