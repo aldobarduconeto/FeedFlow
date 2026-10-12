@@ -14,12 +14,16 @@ class HomePage extends StatelessWidget {
   const HomePage({
     required this.feedService,
     required this.podcastPlayer,
+    required this.isReloadingData,
+    required this.onReloadData,
     required this.onDiscover,
     super.key,
   });
 
   final FeedService feedService;
   final PodcastPlayerService podcastPlayer;
+  final bool isReloadingData;
+  final Future<void> Function() onReloadData;
   final VoidCallback onDiscover;
 
   @override
@@ -50,6 +54,17 @@ class HomePage extends StatelessWidget {
                     tooltip: 'Adicionar fonte RSS',
                     onPressed: () => showAddFeedDialog(context, feedService),
                     icon: const Icon(Icons.add_rounded),
+                  ),
+                  IconButton(
+                    tooltip: 'Recarregar dados',
+                    onPressed: isReloadingData ? null : onReloadData,
+                    icon: isReloadingData
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.sync_rounded),
                   ),
                 ],
               ),

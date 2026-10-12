@@ -17,12 +17,16 @@ class ExplorePage extends StatefulWidget {
     required this.feedService,
     required this.suggestionService,
     required this.podcastPlayer,
+    required this.isReloadingData,
+    required this.onReloadData,
     super.key,
   });
 
   final FeedService feedService;
   final SuggestionService suggestionService;
   final PodcastPlayerService podcastPlayer;
+  final bool isReloadingData;
+  final Future<void> Function() onReloadData;
 
   @override
   State<ExplorePage> createState() => _ExplorePageState();
@@ -199,14 +203,35 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _showFollowing ? 'Seguindo' : 'Explorar',
-                        style: const TextStyle(
-                          fontSize: 30,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.8,
-                          color: FeedFlowColors.textPrimary,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              _showFollowing ? 'Seguindo' : 'Explorar',
+                              style: const TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.8,
+                                color: FeedFlowColors.textPrimary,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            tooltip: 'Recarregar dados',
+                            onPressed: widget.isReloadingData
+                                ? null
+                                : widget.onReloadData,
+                            icon: widget.isReloadingData
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.sync_rounded),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 8),
                       Text(

@@ -28,6 +28,7 @@ class _AppState extends State<App> {
   PodcastPlayerService? _podcastPlayer;
   SuggestionService? _suggestionService;
   bool _authLoading = true;
+  bool _isReloadingData = false;
   String? _userId;
   String? _authError;
 
@@ -93,13 +94,30 @@ class _AppState extends State<App> {
   }
 
   Future<void> _reloadData() async {
+    if (_isReloadingData) return;
     final feedService = _feedService;
     final suggestionService = _suggestionService;
     if (feedService == null || suggestionService == null) return;
-    await Future.wait([
-      feedService.refreshAll(),
-      suggestionService.refresh(suggestedFeeds),
-    ]);
+    setState(() => _isReloadingData = true);
+    try {
+      await Future.wait([
+        feedService.refreshAll(),
+        suggestionService.refresh(suggestedFeeds),
+      ]);
+    } finally {
+      if (mounted) setState(() => _isReloadingData = false);
+    }
+  }
+
+  Future<void> _reloadDataFromNavigation() async {
+    try {
+      await _reloadData();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Não foi possível recarregar os dados: $error')),
+      );
+    }
   }
 
   @override
@@ -167,20 +185,20 @@ class _AppState extends State<App> {
             MediaQuery.orientationOf(context) == Orientation.landscape;
         final isCompact = constraints.maxWidth < 700 && !isLandscape;
         return Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            leading: isCompact
-                ? Padding(
+          appBar: isCompact
+              ? AppBar(
+                  automaticallyImplyLeading: false,
+                  leading: Padding(
                     padding: const EdgeInsets.all(8),
                     child: Image.asset(
                       'assets/icon.png',
                       fit: BoxFit.contain,
                       semanticLabel: 'Logo FeedFlow',
                     ),
-                  )
-                : null,
-            title: const Text('FeedFlow'),
-          ),
+                  ),
+                  title: const Text('FeedFlow'),
+                )
+              : null,
           body: Row(
             children: [
               if (!isCompact) ...[
@@ -228,6 +246,26 @@ class _AppState extends State<App> {
                         selectedIcon: Icon(Icons.settings),
                         label: Text('Configurações'),
                       ),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Divider(),
+                      ),
+                      ListTile(
+                        leading: _isReloadingData
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.sync_rounded),
+                        title: const Text('Recarregar dados'),
+                        enabled: !_isReloadingData,
+                        onTap: _isReloadingData
+                            ? null
+                            : _reloadDataFromNavigation,
+                      ),
                     ],
                   ),
                 ),
@@ -248,6 +286,8 @@ class _AppState extends State<App> {
                               HomePage(
                                 feedService: feedService,
                                 podcastPlayer: podcastPlayer,
+                                isReloadingData: _isReloadingData,
+                                onReloadData: _reloadDataFromNavigation,
                                 onDiscover: () =>
                                     setState(() => _currentIndex = 1),
                               ),
@@ -255,6 +295,8 @@ class _AppState extends State<App> {
                                 feedService: feedService,
                                 suggestionService: _suggestionService!,
                                 podcastPlayer: podcastPlayer,
+                                isReloadingData: _isReloadingData,
+                                onReloadData: _reloadDataFromNavigation,
                               ),
                               SettingsPage(
                                 userId: _userId!,
