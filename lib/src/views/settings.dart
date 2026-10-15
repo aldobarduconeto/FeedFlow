@@ -2,10 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../services/auth_service.dart';
 import '../services/feed_service.dart';
 import '../services/suggestion_service.dart';
 
@@ -14,21 +12,15 @@ import 'package:feedflow/src/views/widget/colors.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({
-    required this.userId,
-    required this.authService,
     required this.feedService,
     required this.suggestionService,
     required this.onReloadData,
-    required this.onSignOut,
     super.key,
   });
 
-  final String userId;
-  final AuthService authService;
   final FeedService feedService;
   final SuggestionService suggestionService;
   final Future<void> Function() onReloadData;
-  final Future<void> Function() onSignOut;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -38,32 +30,14 @@ class _SettingsPageState extends State<SettingsPage> {
   Setting settings = Setting.defaults;
   bool _isLoading = true;
   String? _storageError;
-  AccountProfile? _profile;
-  bool _profileLoading = true;
   bool _isReloadingData = false;
 
-  String get _settingsKey => 'feedflow.settings.v1.${widget.userId}';
+  static const String _settingsKey = 'feedflow.settings.v1.local';
 
   @override
   void initState() {
     super.initState();
     unawaited(_loadSettings());
-    unawaited(_loadProfile());
-  }
-
-  Future<void> _loadProfile() async {
-    try {
-      final profile = await widget.authService.getProfile(widget.userId);
-      if (mounted) setState(() => _profile = profile);
-    } catch (error) {
-      if (mounted) {
-        setState(
-          () => _storageError = 'Não foi possível carregar o perfil: $error',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _profileLoading = false);
-    }
   }
 
   Future<void> _reloadData() async {
@@ -185,55 +159,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   const SizedBox(height: 16),
                 ],
                 const Text(
-                  'PERFIL',
-                  style: TextStyle(
-                    color: FeedFlowColors.secondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: Column(
-                    children: [
-                      ListTile(
-                        leading: const Icon(Icons.person_outline_rounded),
-                        title: Text(
-                          _profileLoading
-                              ? 'Carregando perfil…'
-                              : _profile?.username ?? 'Perfil indisponível',
-                        ),
-                        subtitle: const Text('Nome de usuário'),
-                      ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
-                      ListTile(
-                        leading: const Icon(Icons.fingerprint_rounded),
-                        title: const Text('ID da conta'),
-                        subtitle: SelectableText(_profile?.id ?? widget.userId),
-                        trailing: IconButton(
-                          tooltip: 'Copiar ID',
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            await Clipboard.setData(
-                              ClipboardData(
-                                text: _profile?.id ?? widget.userId,
-                              ),
-                            );
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                const SnackBar(content: Text('ID copiado.')),
-                              );
-                            }
-                          },
-                          icon: const Icon(Icons.copy_rounded),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-                const Text(
                   'DADOS',
                   style: TextStyle(
                     color: FeedFlowColors.secondary,
@@ -257,27 +182,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Atualiza suas fontes e as sugestões do catálogo',
                     ),
                     onTap: _isReloadingData ? null : _reloadData,
-                  ),
-                ),
-                const SizedBox(height: 28),
-                const Text(
-                  'CONTA',
-                  style: TextStyle(
-                    color: FeedFlowColors.secondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(
-                      Icons.logout_rounded,
-                      color: FeedFlowColors.error,
-                    ),
-                    title: const Text('Sair da conta'),
-                    onTap: () async => widget.onSignOut(),
                   ),
                 ),
                 const SizedBox(height: 28),

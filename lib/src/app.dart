@@ -3,11 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import 'models/suggested_feed.dart';
-import 'services/auth_service.dart';
 import 'services/feed_service.dart';
 import 'services/podcast_player_service.dart';
 import 'services/suggestion_service.dart';
-import 'views/auth_page.dart';
 import 'views/explore.dart';
 import 'views/home.dart';
 import 'views/podcast_controls.dart';
@@ -22,74 +20,45 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
-  final AuthService _authService = AuthService();
   int _currentIndex = 0;
   FeedService? _feedService;
   PodcastPlayerService? _podcastPlayer;
   SuggestionService? _suggestionService;
-  bool _authLoading = true;
   bool _isReloadingData = false;
-  String? _userId;
-  String? _authError;
+  String? _initializationError;
 
   @override
   void initState() {
     super.initState();
-    unawaited(_restoreSession());
+    unawaited(_initializeServices());
   }
 
-  Future<void> _restoreSession() async {
+  Future<void> _initializeServices() async {
+    final feedService = FeedService();
+    final suggestionService = SuggestionService(feedService);
+    final podcastPlayer = PodcastPlayerService(feedService: feedService);
+
     try {
-      final userId = await _authService.restoreSession();
-      if (!mounted) return;
+      // Publish services together only after feed storage initialization finishes.
+      await feedService.initialize();
+      if (!mounted) {
+        podcastPlayer.dispose();
+        suggestionService.dispose();
+        feedService.dispose();
+        return;
+      }
       setState(() {
-        _userId = userId;
-        _authLoading = false;
-      });
-      if (userId != null) _startFeedService(userId);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _authError = error.toString();
-        _authLoading = false;
-      });
-    }
-  }
-
-  void _startFeedService(String userId) {
-    final service = FeedService(userId: userId);
-    final suggestionService = SuggestionService(service);
-    _podcastPlayer?.dispose();
-    final player = PodcastPlayerService(feedService: service);
-    setState(() {
-      _userId = userId;
-      _feedService = service;
-      _podcastPlayer = player;
-      _suggestionService = suggestionService;
-      _currentIndex = 0;
-    });
-    unawaited(service.initialize());
-  }
-
-  Future<void> _signOut() async {
-    try {
-      await _authService.signOut();
-      _podcastPlayer?.dispose();
-      _feedService?.dispose();
-      _suggestionService?.dispose();
-      if (!mounted) return;
-      setState(() {
-        _feedService = null;
-        _podcastPlayer = null;
-        _suggestionService = null;
-        _userId = null;
-        _currentIndex = 0;
+        _feedService = feedService;
+        _suggestionService = suggestionService;
+        _podcastPlayer = podcastPlayer;
+        _initializationError = null;
       });
     } catch (error) {
+      podcastPlayer.dispose();
+      suggestionService.dispose();
+      feedService.dispose();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Não foi possível encerrar a sessão: $error')),
-      );
+      setState(() => _initializationError = error.toString());
     }
   }
 
@@ -123,216 +92,209 @@ class _AppState extends State<App> {
   @override
   void dispose() {
     _podcastPlayer?.dispose();
-    _feedService?.dispose();
     _suggestionService?.dispose();
+    _feedService?.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final feedService = _feedService;
+    final podcastPlayer = _podcastPlayer;
+    final suggestionService = _suggestionService;
     return MaterialApp(
       title: 'FeedFlow',
       theme: FeedFlowTheme.dark,
       themeMode: ThemeMode.dark,
-      home: _buildHome(),
-    );
-  }
-
-  Widget _buildHome() {
-    if (_authLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    if (_authError != null) {
-      return Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Não foi possível carregar a sessão local.'),
-                const SizedBox(height: 12),
-                Text(_authError!),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () {
-                    setState(() {
-                      _authError = null;
-                      _authLoading = true;
-                    });
-                    unawaited(_restoreSession());
-                  },
-                  child: const Text('Tentar novamente'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-    if (_userId == null || _feedService == null) {
-      return AuthPage(
-        authService: _authService,
-        onAuthenticated: _startFeedService,
-      );
-    }
-
-    final feedService = _feedService!;
-    final podcastPlayer = _podcastPlayer!;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isLandscape =
-            MediaQuery.orientationOf(context) == Orientation.landscape;
-        final isCompact = constraints.maxWidth < 700 && !isLandscape;
-        return Scaffold(
-          appBar: isCompact
-              ? AppBar(
-                  automaticallyImplyLeading: false,
-                  leading: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Image.asset(
-                      'assets/icon.png',
-                      fit: BoxFit.contain,
-                      semanticLabel: 'Logo FeedFlow',
-                    ),
-                  ),
-                  title: const Text('FeedFlow'),
-                )
-              : null,
-          body: Row(
-            children: [
-              if (!isCompact) ...[
-                SizedBox(
-                  width: 280,
-                  child: NavigationDrawer(
-                    selectedIndex: _currentIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _currentIndex = index);
-                    },
+      home: _initializationError != null
+          ? Scaffold(
+              body: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 20, 16, 20),
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              'assets/icon.png',
-                              width: 40,
-                              height: 40,
-                              semanticLabel: 'Logo FeedFlow',
-                            ),
-                            const SizedBox(width: 12),
-                            const Text(
-                              'FeedFlow',
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const Icon(Icons.error_outline, size: 48),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Não foi possível inicializar o FeedFlow: $_initializationError',
+                        textAlign: TextAlign.center,
                       ),
-                      const NavigationDrawerDestination(
-                        icon: Icon(Icons.home_outlined),
-                        selectedIcon: Icon(Icons.home),
-                        label: Text('Início'),
-                      ),
-                      const NavigationDrawerDestination(
-                        icon: Icon(Icons.subscriptions_outlined),
-                        selectedIcon: Icon(Icons.subscriptions),
-                        label: Text('Inscrições'),
-                      ),
-                      const NavigationDrawerDestination(
-                        icon: Icon(Icons.explore_outlined),
-                        selectedIcon: Icon(Icons.explore),
-                        label: Text('Explorar'),
-                      ),
-                      const NavigationDrawerDestination(
-                        icon: Icon(Icons.settings_outlined),
-                        selectedIcon: Icon(Icons.settings),
-                        label: Text('Configurações'),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() => _initializationError = null);
+                          unawaited(_initializeServices());
+                        },
+                        child: const Text('Tentar novamente'),
                       ),
                     ],
                   ),
                 ),
-                const VerticalDivider(width: 1),
-              ],
-              Expanded(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: isCompact ? double.infinity : 1440,
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: IndexedStack(
-                            index: _currentIndex,
+              ),
+            )
+          : (feedService == null ||
+                podcastPlayer == null ||
+                suggestionService == null)
+          ? const Scaffold(body: Center(child: CircularProgressIndicator()))
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isLandscape =
+                    MediaQuery.orientationOf(context) == Orientation.landscape;
+                final isCompact = constraints.maxWidth < 700 && !isLandscape;
+                return Scaffold(
+                  appBar: isCompact
+                      ? AppBar(
+                          automaticallyImplyLeading: false,
+                          leading: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Image.asset(
+                              'assets/icon.png',
+                              fit: BoxFit.contain,
+                              semanticLabel: 'Logo FeedFlow',
+                            ),
+                          ),
+                          title: const Text('FeedFlow'),
+                        )
+                      : null,
+                  body: Row(
+                    children: [
+                      if (!isCompact) ...[
+                        SizedBox(
+                          width: 280,
+                          child: NavigationDrawer(
+                            selectedIndex: _currentIndex,
+                            onDestinationSelected: (index) {
+                              setState(() => _currentIndex = index);
+                            },
                             children: [
-                              HomePage(
-                                feedService: feedService,
-                                podcastPlayer: podcastPlayer,
-                                isReloadingData: _isReloadingData,
-                                onReloadData: _reloadDataFromNavigation,
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                  24,
+                                  20,
+                                  16,
+                                  20,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Image.asset(
+                                      'assets/icon.png',
+                                      width: 40,
+                                      height: 40,
+                                      semanticLabel: 'Logo FeedFlow',
+                                    ),
+                                    const SizedBox(width: 12),
+                                    const Text(
+                                      'FeedFlow',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              SubscriptionsPage(
-                                feedService: feedService,
-                                podcastPlayer: podcastPlayer,
-                                isReloadingData: _isReloadingData,
-                                onReloadData: _reloadDataFromNavigation,
-                                onDiscover: () =>
-                                    setState(() => _currentIndex = 2),
+                              const NavigationDrawerDestination(
+                                icon: Icon(Icons.home_outlined),
+                                selectedIcon: Icon(Icons.home),
+                                label: Text('Início'),
                               ),
-                              ExplorePage(
-                                feedService: feedService,
-                                suggestionService: _suggestionService!,
-                                isReloadingData: _isReloadingData,
-                                onReloadData: _reloadDataFromNavigation,
+                              const NavigationDrawerDestination(
+                                icon: Icon(Icons.subscriptions_outlined),
+                                selectedIcon: Icon(Icons.subscriptions),
+                                label: Text('Inscrições'),
                               ),
-                              SettingsPage(
-                                userId: _userId!,
-                                authService: _authService,
-                                feedService: feedService,
-                                suggestionService: _suggestionService!,
-                                onReloadData: _reloadData,
-                                onSignOut: _signOut,
+                              const NavigationDrawerDestination(
+                                icon: Icon(Icons.explore_outlined),
+                                selectedIcon: Icon(Icons.explore),
+                                label: Text('Explorar'),
+                              ),
+                              const NavigationDrawerDestination(
+                                icon: Icon(Icons.settings_outlined),
+                                selectedIcon: Icon(Icons.settings),
+                                label: Text('Configurações'),
                               ),
                             ],
                           ),
                         ),
-                        PodcastNowPlayingBar(player: podcastPlayer),
+                        const VerticalDivider(width: 1),
                       ],
-                    ),
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: isCompact ? double.infinity : 1440,
+                            ),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: IndexedStack(
+                                    index: _currentIndex,
+                                    children: [
+                                      HomePage(
+                                        feedService: feedService,
+                                        podcastPlayer: podcastPlayer,
+                                        isReloadingData: _isReloadingData,
+                                        onReloadData: _reloadDataFromNavigation,
+                                      ),
+                                      SubscriptionsPage(
+                                        feedService: feedService,
+                                        podcastPlayer: podcastPlayer,
+                                        isReloadingData: _isReloadingData,
+                                        onReloadData: _reloadDataFromNavigation,
+                                        onDiscover: () =>
+                                            setState(() => _currentIndex = 2),
+                                      ),
+                                      ExplorePage(
+                                        feedService: feedService,
+                                        suggestionService: suggestionService,
+                                        isReloadingData: _isReloadingData,
+                                        onReloadData: _reloadDataFromNavigation,
+                                      ),
+                                      SettingsPage(
+                                        feedService: feedService,
+                                        suggestionService: suggestionService,
+                                        onReloadData: _reloadData,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                PodcastNowPlayingBar(player: podcastPlayer),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-            ],
-          ),
-          bottomNavigationBar: isCompact
-              ? BottomNavigationBar(
-                  currentIndex: _currentIndex,
-                  onTap: (index) => setState(() => _currentIndex = index),
-                  items: const [
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.home),
-                      label: 'Início',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.subscriptions),
-                      label: 'Inscrições',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.explore),
-                      label: 'Explorar',
-                    ),
-                    BottomNavigationBarItem(
-                      icon: Icon(Icons.settings),
-                      label: 'Configurações',
-                    ),
-                  ],
-                )
-              : null,
-        );
-      },
+                  bottomNavigationBar: isCompact
+                      ? BottomNavigationBar(
+                          currentIndex: _currentIndex,
+                          onTap: (index) =>
+                              setState(() => _currentIndex = index),
+                          items: const [
+                            BottomNavigationBarItem(
+                              icon: Icon(Icons.home),
+                              label: 'Início',
+                            ),
+                            BottomNavigationBarItem(
+                              icon: Icon(Icons.subscriptions),
+                              label: 'Inscrições',
+                            ),
+                            BottomNavigationBarItem(
+                              icon: Icon(Icons.explore),
+                              label: 'Explorar',
+                            ),
+                            BottomNavigationBarItem(
+                              icon: Icon(Icons.settings),
+                              label: 'Configurações',
+                            ),
+                          ],
+                        )
+                      : null,
+                );
+              },
+            ),
     );
   }
 }

@@ -12,12 +12,10 @@ import '../models/feed.dart';
 import '../models/feed_source.dart';
 
 class FeedService extends ChangeNotifier {
-  FeedService({String userId = 'local', http.Client? client})
+  FeedService({http.Client? client})
     : _client = client ?? http.Client(),
-      _dataKey = 'feedflow.data.v1.$userId';
-
+      _dataKey = 'feedflow.data.v1.local';
   static const _timeout = Duration(seconds: 20);
-
   final http.Client _client;
   final String _dataKey;
   final List<FeedSource> _sources = [];

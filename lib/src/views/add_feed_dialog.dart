@@ -83,18 +83,19 @@ class _AddFeedDialogState extends State<_AddFeedDialog> {
             DropdownButtonFormField<String>(
               initialValue: _category,
               decoration: const InputDecoration(labelText: 'Categoria'),
-              items: const [
-                'Personalizados',
-                'Notícias',
-                'Tecnologia',
-                'Ciência',
-                'Podcasts',
-              ].map((category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Text(category),
-                );
-              }).toList(),
+              items:
+                  const [
+                    'Personalizados',
+                    'Notícias',
+                    'Tecnologia',
+                    'Ciência',
+                    'Podcasts',
+                  ].map((category) {
+                    return DropdownMenuItem(
+                      value: category,
+                      child: Text(category),
+                    );
+                  }).toList(),
               onChanged: _saving
                   ? null
                   : (value) {

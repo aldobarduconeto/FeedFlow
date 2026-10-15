@@ -1,10 +1,13 @@
 import 'dart:async';
+
 import 'widget/colors.dart';
 import '../models/feed.dart';
 import 'add_feed_dialog.dart';
 import '../models/suggested_feed.dart';
 import '../services/feed_service.dart';
+
 import 'package:flutter/material.dart';
+
 import '../services/suggestion_service.dart';
 
 class ExplorePage extends StatefulWidget {
@@ -26,7 +29,13 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
-  static const _categories = ['Tudo', 'Notícias', 'Tecnologia', 'Ciência', 'Podcasts'];
+  static const _categories = [
+    'Tudo',
+    'Notícias',
+    'Tecnologia',
+    'Ciência',
+    'Podcasts',
+  ];
   final TextEditingController _searchController = TextEditingController();
   final Set<String> _addingUrls = {};
   Timer? _catalogRefreshTimer;
@@ -111,7 +120,11 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
   int _recentPublicationCount(SuggestedFeed feed) {
     final cutoff = DateTime.now().subtract(const Duration(days: 30));
     final preview = widget.suggestionService.previews[feed.url];
-    return preview?.items.where((item) => item.publishedAt != null && item.publishedAt!.isAfter(cutoff),)
+    return preview?.items
+            .where(
+              (item) =>
+                  item.publishedAt != null && item.publishedAt!.isAfter(cutoff),
+            )
             .length ??
         0;
   }

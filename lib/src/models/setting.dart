@@ -37,7 +37,8 @@ class Setting {
   }) {
     return Setting(
       autoRefresh: autoRefresh ?? this.autoRefresh,
-      refreshIntervalMinutes: refreshIntervalMinutes ?? this.refreshIntervalMinutes,
+      refreshIntervalMinutes:
+          refreshIntervalMinutes ?? this.refreshIntervalMinutes,
       wifiOnly: wifiOnly ?? this.wifiOnly,
       markAsReadOnOpen: markAsReadOnOpen ?? this.markAsReadOnOpen,
       downloadImages: downloadImages ?? this.downloadImages,
@@ -67,7 +68,7 @@ class Setting {
   factory Setting.fromMap(Map<String, dynamic> map) {
     return Setting(
       autoRefresh: map['autoRefresh'] as bool? ?? true,
-      refreshIntervalMinutes:  map['refreshIntervalMinutes'] as int? ?? 30,
+      refreshIntervalMinutes: map['refreshIntervalMinutes'] as int? ?? 30,
       wifiOnly: map['wifiOnly'] as bool? ?? false,
       markAsReadOnOpen: map['markAsReadOnOpen'] as bool? ?? true,
       downloadImages: map['downloadImages'] as bool? ?? true,

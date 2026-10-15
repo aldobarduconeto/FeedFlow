@@ -81,18 +81,10 @@ abstract final class FeedFlowTheme {
           color: FeedFlowColors.textPrimary,
           fontWeight: FontWeight.w500,
         ),
-        bodyLarge: TextStyle(
-          color: FeedFlowColors.textPrimary,
-        ),
-        bodyMedium: TextStyle(
-          color: FeedFlowColors.textSecondary,
-        ),
-        bodySmall: TextStyle(
-          color: FeedFlowColors.textSecondary,
-        ),
-        labelLarge: TextStyle(
-          fontWeight: FontWeight.w600,
-        ),
+        bodyLarge: TextStyle(color: FeedFlowColors.textPrimary),
+        bodyMedium: TextStyle(color: FeedFlowColors.textSecondary),
+        bodySmall: TextStyle(color: FeedFlowColors.textSecondary),
+        labelLarge: TextStyle(fontWeight: FontWeight.w600),
       ),
       // AppBar
       appBarTheme: const AppBarTheme(
@@ -142,7 +134,9 @@ abstract final class FeedFlowTheme {
           disabledForegroundColor: FeedFlowColors.textDisabled,
           elevation: 0,
           minimumSize: const Size(48, 48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
       // Botões de texto
@@ -150,7 +144,10 @@ abstract final class FeedFlowTheme {
         style: TextButton.styleFrom(foregroundColor: FeedFlowColors.secondary),
       ),
       // Ícones
-      iconTheme: const IconThemeData(color: FeedFlowColors.textSecondary, size: 24),
+      iconTheme: const IconThemeData(
+        color: FeedFlowColors.textSecondary,
+        size: 24,
+      ),
       // Navegação inferior
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: FeedFlowColors.surface,
@@ -176,9 +173,7 @@ abstract final class FeedFlowTheme {
         backgroundColor: FeedFlowColors.surfaceHighlight,
         contentTextStyle: const TextStyle(color: FeedFlowColors.textPrimary),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       // Seleção de texto
       textSelectionTheme: const TextSelectionThemeData(
