@@ -46,11 +46,6 @@ jobs:
         run: |
           if [ "${{ matrix.target }}" = "apk" ]; then
             flutter build apk --release
-          elif [ "${{ matrix.target }}" = "appbundle" ]; then
-            flutter build appbundle --release
-          elif [ "${{ matrix.target }}" = "web" ]; then
-            flutter build web --release
-            cd build/web && zip -r ../../web-build.zip . && cd ../..
           elif [ "${{ matrix.target }}" = "linux" ]; then
             flutter build linux --release
             cd build/linux/x64/release/bundle && zip -r ../../../../../linux-build.zip . && cd ../../../../..
@@ -155,8 +150,6 @@ jobs:
         run: |
           mkdir -p release_assets
           cp artifacts/build-apk/app-release.apk release_assets/app-release.apk || true
-          cp artifacts/build-appbundle/app-release.aab release_assets/app-release.aab || true
-          cp artifacts/build-web/web-build.zip release_assets/web-build.zip || true
           cp artifacts/build-linux/linux-build.zip release_assets/linux-build.zip || true
           cp artifacts/build-windows/windows-build.zip release_assets/windows-build.zip || true
           cp artifacts/build-ios/ios-build.zip release_assets/ios-build.zip || true
