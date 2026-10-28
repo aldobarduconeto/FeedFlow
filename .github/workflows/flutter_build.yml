@@ -8,89 +8,6 @@ on:
 
 jobs:
   # ------------------------------------------------------
-  # 1. Builds para Android, Web e Linux (Runner Ubuntu)
-  # ------------------------------------------------------
-  build-ubuntu:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [apk, linux]
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Configurar Java (necessário para Android)
-        if: matrix.target == 'apk' || matrix.target == 'appbundle'
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Instalar dependências para Linux
-        if: matrix.target == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblldb-dev
-
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-          flutter-version: 3.47.8 # Detecta a versão do Flutter do seu projeto
-
-      - name: Instalar dependências do Flutter
-        run: flutter pub get
-
-      - name: Compilar artefato (${{ matrix.target }})
-        run: |
-          if [ "${{ matrix.target }}" = "apk" ]; then
-            flutter build apk --release
-          elif [ "${{ matrix.target }}" = "linux" ]; then
-            flutter build linux --release
-            cd build/linux/x64/release/bundle && zip -r ../../../../../linux-build.zip . && cd ../../../../..
-          fi
-
-      - name: Upload do Artefato
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-${{ matrix.target }}
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            linux-build.zip
-
-  # ------------------------------------------------------
-  # 2. Build para Windows (Runner Windows)
-  # ------------------------------------------------------
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout do código
-        uses: actions/checkout@v4
-
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-          flutter-version: 3.47.8
-
-      - name: Instalar dependências
-        run: flutter pub get
-
-      - name: Build para Windows
-        run: flutter build windows --release
-
-      - name: Compactar build do Windows
-        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath windows-build.zip
-
-      - name: Upload do Artefato
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-windows
-          path: windows-build.zip
-
-  # ------------------------------------------------------
   # 3. Builds para iOS e macOS (Runner macOS)
   # ------------------------------------------------------
   build-macos:
@@ -136,7 +53,7 @@ jobs:
   # 4. Publicação unificada no GitHub Releases
   # ------------------------------------------------------
   publish-release:
-    needs: [build-ubuntu, build-windows, build-macos]
+    needs: [build-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -149,9 +66,6 @@ jobs:
       - name: Organizar arquivos para a Release
         run: |
           mkdir -p release_assets
-          cp artifacts/build-apk/app-release.apk release_assets/app-release.apk || true
-          cp artifacts/build-linux/linux-build.zip release_assets/linux-build.zip || true
-          cp artifacts/build-windows/windows-build.zip release_assets/windows-build.zip || true
           cp artifacts/build-ios/ios-build.zip release_assets/ios-build.zip || true
           cp artifacts/build-macos/macos-build.zip release_assets/macos-build.zip || true
 
