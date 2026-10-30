@@ -223,20 +223,84 @@ abstract final class FeedFlowTheme {
         color: FeedFlowColors.secondary,
         linearTrackColor: FeedFlowColors.surfaceHighlight,
       ),
-      // Chips
+      // Chips Modernos
       chipTheme: ChipThemeData(
         backgroundColor: FeedFlowColors.surfaceElevated,
-        selectedColor: FeedFlowColors.primary.withValues(alpha: 0.28),
+        selectedColor: FeedFlowColors.primary.withValues(alpha: 0.16),
+        disabledColor: FeedFlowColors.surfaceHighlight.withValues(alpha: 0.4),
         labelStyle: TextStyle(
+          color: FeedFlowColors.textPrimary,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w500,
+        ),
+        secondaryLabelStyle: TextStyle(
+          color: FeedFlowColors.primary,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: FeedFlowColors.divider.withValues(alpha: 0.7),
+            width: 0.8,
+          ),
+        ),
+        showCheckmark: false,
+        elevation: 0,
+        pressElevation: 0,
+      ),
+      // Popups / Menus Modernos
+      popupMenuTheme: PopupMenuThemeData(
+        color: FeedFlowColors.surfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        elevation: 10,
+        shadowColor: Colors.black.withValues(alpha: 0.35),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: FeedFlowColors.divider.withValues(alpha: 0.75),
+            width: 0.8,
+          ),
+        ),
+        textStyle: TextStyle(
           color: FeedFlowColors.textPrimary,
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      ),
+      // Diálogos Modernos
+      dialogTheme: DialogThemeData(
+        backgroundColor: FeedFlowColors.surfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        elevation: 14,
+        shadowColor: Colors.black.withValues(alpha: 0.4),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-          side: BorderSide(color: FeedFlowColors.divider, width: 0.6),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(
+            color: FeedFlowColors.divider.withValues(alpha: 0.7),
+            width: 0.8,
+          ),
         ),
+        titleTextStyle: TextStyle(
+          color: FeedFlowColors.textPrimary,
+          fontSize: 18.5,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.3,
+        ),
+      ),
+      // BottomSheet Moderno
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: FeedFlowColors.surfaceElevated,
+        surfaceTintColor: Colors.transparent,
+        elevation: 16,
+        modalBackgroundColor: FeedFlowColors.surfaceElevated,
+        modalElevation: 16,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        dragHandleColor: FeedFlowColors.outline.withValues(alpha: 0.4),
+        dragHandleSize: const Size(38, 4.5),
       ),
       // Sliders
       sliderTheme: SliderThemeData(

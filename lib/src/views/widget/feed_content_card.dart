@@ -101,27 +101,27 @@ class _FeedContentCardState extends State<FeedContentCard> {
       ].join(' · ');
       if (!podcast) return _newsCard(metadata);
       return Container(
+        margin: const EdgeInsets.only(bottom: 14),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          color: FeedFlowColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: playing
+                ? accent.withValues(alpha: 0.6)
+                : FeedFlowColors.divider.withValues(alpha: 0.6),
+            width: playing ? 1.2 : 0.8,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              color: Colors.black.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
+        clipBehavior: Clip.antiAlias,
         child: Material(
-          color: FeedFlowColors.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-            side: BorderSide(
-              color: playing
-                  ? accent.withValues(alpha: 0.7)
-                  : FeedFlowColors.divider.withValues(alpha: 0.7),
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
+          color: Colors.transparent,
           child: InkWell(
             onTap: onOpen,
             child: Column(
@@ -402,25 +402,25 @@ class _FeedContentCardState extends State<FeedContentCard> {
   Widget _newsCard(String metadata) {
     final progress = (item.readingProgress ?? 0).clamp(0.0, 1.0);
     return Container(
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
+        color: FeedFlowColors.surface,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: FeedFlowColors.divider.withValues(alpha: 0.65),
+          width: 0.8,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Material(
-        color: FeedFlowColors.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: FeedFlowColors.divider.withValues(alpha: 0.55),
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
+        color: Colors.transparent,
         child: InkWell(
           onTap: onOpen,
           child: Column(
@@ -430,128 +430,122 @@ class _FeedContentCardState extends State<FeedContentCard> {
                 LayoutBuilder(
                   builder: (context, constraints) => SizedBox(
                     width: double.infinity,
-                    height: (constraints.maxWidth * 9 / 16).clamp(160.0, 320.0),
+                    height: (constraints.maxWidth * 9 / 16).clamp(160.0, 300.0),
                     child: _artwork(),
                   ),
                 ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Container(
-                          width: 3,
-                          height: 12,
-                          color: FeedFlowColors.secondary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: FeedFlowColors.secondary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
                           child: Text(
                             (source?.category ?? 'Notícias').toUpperCase(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              fontSize: 10,
-                              letterSpacing: 1.6,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 9.5,
+                              letterSpacing: 0.8,
+                              fontWeight: FontWeight.w700,
                               color: FeedFlowColors.secondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            source?.title ?? 'FeedFlow',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: FeedFlowColors.textSecondary,
                             ),
                           ),
                         ),
                         _favorite(),
                       ],
                     ),
+                    const SizedBox(height: 8),
                     Text(
                       item.title,
-                      maxLines: 4,
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontFamily: 'serif',
-                        fontSize: 25,
-                        height: 1.17,
-                        letterSpacing: -0.55,
+                        fontSize: 18.5,
+                        height: 1.3,
+                        letterSpacing: -0.4,
                         fontWeight: FontWeight.w700,
                         color: FeedFlowColors.textPrimary,
                       ),
                     ),
                     if (_summary.isNotEmpty) ...[
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Text(
                         _summary,
-                        maxLines: 3,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 13,
-                          height: 1.6,
+                          height: 1.5,
                           color: FeedFlowColors.textSecondary,
                         ),
                       ),
                     ],
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 5,
-                      children: [
-                        Text(
-                          source?.title ?? 'FeedFlow',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: FeedFlowColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          '· $metadata',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: FeedFlowColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (item.author?.isNotEmpty == true) ...[
-                      const SizedBox(height: 5),
-                      Text(
-                        'Por ${item.author}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: FeedFlowColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 14),
-                    Divider(height: 1, color: FeedFlowColors.divider),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(
-                            progress > 0 && progress < 1
-                                ? 'Continuar leitura · ${(progress * 100).round()}%'
-                                : 'Ler matéria',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: FeedFlowColors.secondary,
-                            ),
+                        Text(
+                          metadata,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: FeedFlowColors.textDisabled,
                           ),
                         ),
+                        if (item.author?.isNotEmpty == true) ...[
+                          Text(
+                            ' · Por ${item.author}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: FeedFlowColors.textDisabled,
+                            ),
+                          ),
+                        ],
+                        const Spacer(),
                         if (item.isRead)
                           Padding(
-                            padding: const EdgeInsets.only(right: 10),
+                            padding: const EdgeInsets.only(right: 6),
                             child: Icon(
                               Icons.check_circle_outline_rounded,
-                              size: 16,
+                              size: 15,
                               color: FeedFlowColors.success,
                             ),
                           ),
+                        Text(
+                          progress > 0 && progress < 1
+                              ? '${(progress * 100).round()}% lido'
+                              : 'Ler',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: FeedFlowColors.secondary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: 18,
+                          size: 14,
                           color: FeedFlowColors.secondary,
                         ),
                       ],

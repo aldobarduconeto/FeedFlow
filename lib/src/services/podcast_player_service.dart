@@ -158,6 +158,12 @@ class PodcastPlayerService extends ChangeNotifier {
 
   bool isCurrent(FeedItem item) => _currentItem?.id == item.id;
 
+  Future<void> play(FeedItem item) async {
+    if (!isCurrent(item) || !isPlaying) {
+      await toggle(item);
+    }
+  }
+
   Future<void> toggle(FeedItem item) async {
     if (!item.isPodcast || !item.hasAudio) {
       throw const FormatException('Este episódio não possui áudio.');

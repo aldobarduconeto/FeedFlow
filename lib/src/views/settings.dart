@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/feed_service.dart';
 import '../services/suggestion_service.dart';
+import '../services/notification_service.dart';
 
 import 'package:feedflow/src/models/setting.dart';
 import 'package:feedflow/src/views/widget/colors.dart';
@@ -17,11 +18,13 @@ class SettingsPage extends StatefulWidget {
     required this.feedService,
     required this.suggestionService,
     required this.onReloadData,
+    this.notificationService,
     super.key,
   });
 
   final FeedService feedService;
   final SuggestionService suggestionService;
+  final NotificationService? notificationService;
   final Future<void> Function() onReloadData;
 
   @override
@@ -191,6 +194,55 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Padding(
                     padding: EdgeInsets.all(16),
                     child: AppearanceControls(),
+                  ),
+                ),
+                SizedBox(height: 28),
+                Text(
+                  'NOTIFICAÇÕES',
+                  style: TextStyle(
+                    color: FeedFlowColors.secondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Card(
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        value: widget.notificationService?.notificationsEnabled ?? true,
+                        onChanged: (val) {
+                          widget.notificationService?.setNotificationsEnabled(val);
+                          setState(() {});
+                        },
+                        secondary: Icon(Icons.notifications_active_outlined),
+                        title: Text('Notificações de novas publicações'),
+                        subtitle: Text(
+                          'Avisa quando uma notícia ou podcast é lançado com título e publisher',
+                        ),
+                      ),
+                      Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: Icon(Icons.article_outlined),
+                        title: Text('Testar notificação de notícia'),
+                        subtitle: Text('Exibe notificação com título e publisher'),
+                        trailing: Icon(Icons.send_rounded, size: 18),
+                        onTap: () {
+                          widget.notificationService?.sendTestNotification(isPodcast: false);
+                        },
+                      ),
+                      Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: Icon(Icons.podcasts_rounded),
+                        title: Text('Testar notificação de podcast'),
+                        subtitle: Text('Exibe notificação com título e publisher'),
+                        trailing: Icon(Icons.send_rounded, size: 18),
+                        onTap: () {
+                          widget.notificationService?.sendTestNotification(isPodcast: true);
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: 28),

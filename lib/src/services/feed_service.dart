@@ -15,14 +15,22 @@ import 'package:xml/xml.dart';
 
 import '../models/feed.dart';
 import '../models/feed_source.dart';
+import 'notification_service.dart';
 
 class FeedService extends ChangeNotifier {
-  FeedService({http.Client? client})
+  FeedService({http.Client? client, NotificationService? notificationService})
     : _client = client ?? http.Client(),
+      _notificationService = notificationService,
       _dataKey = 'feedflow.data.v1.local';
   static const _timeout = Duration(seconds: 20);
   final http.Client _client;
+  NotificationService? _notificationService;
   final String _dataKey;
+
+  NotificationService? get notificationService => _notificationService;
+  set notificationService(NotificationService? service) {
+    _notificationService = service;
+  }
   final List<FeedSource> _sources = [];
   final List<FeedItem> _items = [];
   final Map<String, String> refreshErrors = {};
@@ -187,6 +195,16 @@ class FeedService extends ChangeNotifier {
     refreshErrors.remove(feedId);
     await _persist();
     notifyListeners();
+  }
+
+  Future<void> updateSourceCategory(String sourceId, String newCategory) async {
+    await _load();
+    final index = _sources.indexWhere((source) => source.id == sourceId);
+    if (index != -1) {
+      _sources[index] = _sources[index].copyWith(category: newCategory);
+      await _persist();
+      notifyListeners();
+    }
   }
 
   Future<void> savePlaybackPosition(FeedItem item, Duration position) async {
@@ -373,6 +391,12 @@ class FeedService extends ChangeNotifier {
       if (index == null) {
         itemIndexes[item.id] = _items.length;
         _items.add(updated);
+        if (_loaded) {
+          _notificationService?.notifyItemPublished(
+            item: updated,
+            source: result.source,
+          );
+        }
       } else {
         _items[index] = updated;
       }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'widget/colors.dart';
 import '../models/feed.dart';
@@ -32,29 +33,65 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
-  static final _categories = [
-    'Tudo',
-    'Notícias',
-    'Tecnologia',
-    'Ciência',
-    'Podcasts',
-  ];
+  static const _categories = FeedCategories.exploreCategories;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _categoryScrollController = ScrollController();
   final Set<String> _addingUrls = {};
   Timer? _catalogRefreshTimer;
   Timer? _searchDebounce;
   String _category = 'Tudo';
   String _catalogSort = 'Mais atualizados';
   bool _isAppResumed = true;
+  bool _canScrollLeft = false;
+  bool _canScrollRight = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_refreshCatalog());
+      if (mounted) {
+        unawaited(_refreshCatalog());
+        _updateScrollButtons();
+      }
     });
+    _categoryScrollController.addListener(_updateScrollButtons);
     _scheduleCatalogRefresh();
+  }
+
+  void _updateScrollButtons() {
+    if (!_categoryScrollController.hasClients) return;
+    final pos = _categoryScrollController.position;
+    final canLeft = pos.pixels > 6;
+    final canRight = pos.pixels < (pos.maxScrollExtent - 6);
+    if (canLeft != _canScrollLeft || canRight != _canScrollRight) {
+      if (mounted) {
+        setState(() {
+          _canScrollLeft = canLeft;
+          _canScrollRight = canRight;
+        });
+      }
+    }
+  }
+
+  void _scrollCategories(bool forward) {
+    if (!_categoryScrollController.hasClients) return;
+    const scrollStep = 260.0;
+    final target = forward
+        ? (_categoryScrollController.offset + scrollStep).clamp(
+            0.0,
+            _categoryScrollController.position.maxScrollExtent,
+          )
+        : (_categoryScrollController.offset - scrollStep).clamp(
+            0.0,
+            _categoryScrollController.position.maxScrollExtent,
+          );
+
+    _categoryScrollController.animateTo(
+      target,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
   }
 
   @override
@@ -77,6 +114,8 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _catalogRefreshTimer?.cancel();
     _searchDebounce?.cancel();
+    _categoryScrollController.removeListener(_updateScrollButtons);
+    _categoryScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -144,6 +183,72 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
             )
             .length ??
         0;
+  }
+
+      Widget _categoryNavButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: FeedFlowColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(
+                color: FeedFlowColors.divider.withValues(alpha: 0.8),
+                width: 0.8,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Icon(
+              icon,
+              size: 20,
+              color: FeedFlowColors.textPrimary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _categoryIcon(String category) {
+    switch (category) {
+      case 'Notícias':
+        return Icons.newspaper_rounded;
+      case 'Tecnologia':
+        return Icons.memory_rounded;
+      case 'Ciência':
+        return Icons.science_rounded;
+      case 'Economia & Negócios':
+        return Icons.trending_up_rounded;
+      case 'Cultura & Geek':
+        return Icons.sports_esports_rounded;
+      case 'Esportes':
+        return Icons.sports_soccer_rounded;
+      case 'Design & Arte':
+        return Icons.palette_outlined;
+      case 'Saúde & Bem-Estar':
+        return Icons.favorite_outline_rounded;
+      case 'Podcasts':
+        return Icons.podcasts_rounded;
+      default:
+        return Icons.explore_rounded;
+    }
   }
 
   @override
@@ -337,31 +442,123 @@ class _ExplorePageState extends State<ExplorePage> with WidgetsBindingObserver {
                               'Mais novos',
                               'Mais atualizados',
                             ])
-                              ChoiceChip(
+                              FilterChip(
+                                showCheckmark: false,
+                                avatar: Icon(
+                                  sort == 'Mais novos'
+                                      ? Icons.fiber_new_rounded
+                                      : Icons.bolt_rounded,
+                                  size: 15,
+                                  color: _catalogSort == sort
+                                      ? FeedFlowColors.secondary
+                                      : FeedFlowColors.textDisabled,
+                                ),
                                 label: Text(sort),
                                 selected: _catalogSort == sort,
+                                selectedColor: FeedFlowColors.secondary.withValues(alpha: 0.14),
+                                backgroundColor: FeedFlowColors.surfaceElevated,
+                                labelStyle: TextStyle(
+                                  color: _catalogSort == sort
+                                      ? FeedFlowColors.secondary
+                                      : FeedFlowColors.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: _catalogSort == sort
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                ),
+                                side: BorderSide(
+                                  color: _catalogSort == sort
+                                      ? FeedFlowColors.secondary.withValues(alpha: 0.8)
+                                      : FeedFlowColors.divider.withValues(alpha: 0.6),
+                                  width: _catalogSort == sort ? 1.0 : 0.6,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
                                 onSelected: (_) =>
                                     setState(() => _catalogSort = sort),
                               ),
                           ],
                         ),
-                        SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              for (final category in _categories)
-                                Padding(
-                                  padding: EdgeInsets.only(right: 8),
-                                  child: ChoiceChip(
-                                    label: Text(category),
-                                    selected: _category == category,
-                                    onSelected: (_) =>
-                                        setState(() => _category = category),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            if (_canScrollLeft) ...[
+                              _categoryNavButton(
+                                icon: Icons.chevron_left_rounded,
+                                tooltip: 'Rolar categorias para esquerda',
+                                onPressed: () => _scrollCategories(false),
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: ScrollConfiguration(
+                                behavior: ScrollConfiguration.of(context).copyWith(
+                                  dragDevices: {
+                                    PointerDeviceKind.touch,
+                                    PointerDeviceKind.mouse,
+                                    PointerDeviceKind.trackpad,
+                                    PointerDeviceKind.stylus,
+                                  },
+                                ),
+                                child: SingleChildScrollView(
+                                  controller: _categoryScrollController,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const BouncingScrollPhysics(),
+                                  child: Row(
+                                    children: [
+                                      for (final category in _categories)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 8),
+                                          child: FilterChip(
+                                            showCheckmark: false,
+                                            avatar: Icon(
+                                              _categoryIcon(category),
+                                              size: 15,
+                                              color: _category == category
+                                                  ? FeedFlowColors.primary
+                                                  : FeedFlowColors.textSecondary,
+                                            ),
+                                            label: Text(category),
+                                            selected: _category == category,
+                                            selectedColor: FeedFlowColors.primary.withValues(alpha: 0.16),
+                                            backgroundColor: FeedFlowColors.surfaceElevated,
+                                            labelStyle: TextStyle(
+                                              color: _category == category
+                                                  ? FeedFlowColors.primary
+                                                  : FeedFlowColors.textSecondary,
+                                              fontSize: 12.5,
+                                              fontWeight: _category == category
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w500,
+                                            ),
+                                            side: BorderSide(
+                                              color: _category == category
+                                                  ? FeedFlowColors.primary
+                                                  : FeedFlowColors.divider.withValues(alpha: 0.6),
+                                              width: _category == category ? 1.0 : 0.6,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            onSelected: (_) =>
+                                                setState(() => _category = category),
+                                          ),
+                                        ),
+                                    ],
                                   ),
                                 ),
+                              ),
+                            ),
+                            if (_canScrollRight) ...[
+                              const SizedBox(width: 8),
+                              _categoryNavButton(
+                                icon: Icons.chevron_right_rounded,
+                                tooltip: 'Rolar categorias para direita',
+                                onPressed: () => _scrollCategories(true),
+                              ),
                             ],
-                          ),
+                          ],
                         ),
                         SizedBox(height: 16),
                       ],

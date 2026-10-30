@@ -29,6 +29,7 @@ class _NewsPageState extends State<NewsPage> {
   final _search = TextEditingController();
   String _filter = 'all';
   String? _sourceId;
+  String? _categoryFilter;
   static const _labels = {
     'all': 'Mais recentes',
     'unread': 'Não lidas',
@@ -55,6 +56,13 @@ class _NewsPageState extends State<NewsPage> {
                   source.category.toLowerCase() != 'podcasts'),
         )
         .toList();
+  }
+
+  Set<String> get _availableCategories {
+    return _sources
+        .map((s) => s.category.trim())
+        .where((c) => c.isNotEmpty)
+        .toSet();
   }
 
   Future<void> _open(FeedItem item) async {
@@ -114,28 +122,63 @@ class _NewsPageState extends State<NewsPage> {
                       color: FeedFlowColors.secondary,
                     ),
                     title: Text(source.title),
-                    subtitle: Text(source.category),
+                    subtitle: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: FeedFlowColors.secondary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            source.category,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: FeedFlowColors.secondary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '• Toque para alterar',
+                          style: TextStyle(fontSize: 11, color: FeedFlowColors.textDisabled),
+                        ),
+                      ],
+                    ),
                     onTap: () {
-                      setState(() => _sourceId = source.id);
-                      Navigator.pop(context);
+                      showEditCategoryDialog(context, source, widget.feeds);
                     },
-                    trailing: IconButton(
-                      tooltip: 'Remover ${source.title}',
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () async {
-                        try {
-                          await widget.feeds.removeFeed(source.id);
-                          if (mounted && _sourceId == source.id)
-                            setState(() => _sourceId = null);
-                        } catch (error) {
-                          if (context.mounted)
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Falha ao remover fonte: $error'),
-                              ),
-                            );
-                        }
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Alterar categoria',
+                          icon: const Icon(Icons.label_outline_rounded, size: 20),
+                          onPressed: () {
+                            showEditCategoryDialog(context, source, widget.feeds);
+                          },
+                        ),
+                        IconButton(
+                          tooltip: 'Remover ${source.title}',
+                          icon: const Icon(Icons.close_rounded),
+                          onPressed: () async {
+                            try {
+                              await widget.feeds.removeFeed(source.id);
+                              if (mounted && _sourceId == source.id)
+                                setState(() => _sourceId = null);
+                            } catch (error) {
+                              if (context.mounted)
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Falha ao remover fonte: $error'),
+                                  ),
+                                );
+                            }
+                          },
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -157,6 +200,10 @@ class _NewsPageState extends State<NewsPage> {
       final items = widget.feeds.items.where((item) {
         if (item.isPodcast) return false;
         if (_sourceId != null && item.feedId != _sourceId) return false;
+        if (_categoryFilter != null &&
+            sources[item.feedId]?.category != _categoryFilter) {
+          return false;
+        }
         if (_filter == 'unread' && item.isRead) return false;
         if (_filter == 'saved' && !item.isFavorite) return false;
         final progress = item.readingProgress ?? 0;
@@ -191,17 +238,17 @@ class _NewsPageState extends State<NewsPage> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Seu mundo, em dia.',
+                                      'Notícias',
                                       style: TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: -1,
+                                        fontSize: 26,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.6,
                                         color: FeedFlowColors.textPrimary,
                                       ),
                                     ),
-                                    const SizedBox(height: 6),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      'As fontes que você escolheu. No seu tempo.',
+                                      'Suas fontes e leituras em fluxo contínuo',
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: FeedFlowColors.textSecondary,
@@ -247,45 +294,94 @@ class _NewsPageState extends State<NewsPage> {
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               PopupMenuButton<String>(
-                                tooltip: 'Filtrar notícias',
+                                tooltip: 'Filtrar status da notícia',
                                 initialValue: _filter,
+                                offset: const Offset(0, 42),
+                                elevation: 10,
                                 onSelected: (value) =>
                                     setState(() => _filter = value),
                                 itemBuilder: (_) => _labels.entries
                                     .map(
-                                      (entry) => PopupMenuItem(
+                                      (entry) => _buildPopupItem(
                                         value: entry.key,
-                                        child: Text(entry.value),
+                                        label: entry.value,
+                                        isSelected: _filter == entry.key,
+                                        icon: entry.key == 'unread'
+                                            ? Icons.mark_email_unread_outlined
+                                            : entry.key == 'saved'
+                                                ? Icons.bookmark_outline_rounded
+                                                : entry.key == 'progress'
+                                                    ? Icons.auto_stories_outlined
+                                                    : Icons.access_time_rounded,
                                       ),
                                     )
                                     .toList(),
                                 child: _filterPill(
                                   _labels[_filter]!,
                                   Icons.filter_list_rounded,
+                                  isActive: _filter != 'all',
                                 ),
                               ),
+                              if (_availableCategories.isNotEmpty)
+                                PopupMenuButton<String>(
+                                  tooltip: 'Filtrar por categoria',
+                                  initialValue: _categoryFilter ?? 'all',
+                                  offset: const Offset(0, 42),
+                                  elevation: 10,
+                                  onSelected: (value) => setState(
+                                    () => _categoryFilter =
+                                        value == 'all' ? null : value,
+                                  ),
+                                  itemBuilder: (_) => [
+                                    _buildPopupItem(
+                                      value: 'all',
+                                      label: 'Todas as categorias',
+                                      isSelected: _categoryFilter == null,
+                                      icon: Icons.apps_rounded,
+                                    ),
+                                    for (final cat in _availableCategories)
+                                      _buildPopupItem(
+                                        value: cat,
+                                        label: cat,
+                                        isSelected: _categoryFilter == cat,
+                                        icon: Icons.label_outline_rounded,
+                                      ),
+                                  ],
+                                  child: _filterPill(
+                                    _categoryFilter ?? 'Categorias',
+                                    Icons.category_outlined,
+                                    isActive: _categoryFilter != null,
+                                  ),
+                                ),
                               PopupMenuButton<String>(
                                 tooltip: 'Filtrar por fonte',
                                 initialValue: _sourceId ?? 'all',
+                                offset: const Offset(0, 42),
+                                elevation: 10,
                                 onSelected: (value) => setState(
                                   () =>
                                       _sourceId = value == 'all' ? null : value,
                                 ),
                                 itemBuilder: (_) => [
-                                  const PopupMenuItem(
+                                  _buildPopupItem(
                                     value: 'all',
-                                    child: Text('Todas as fontes'),
+                                    label: 'Todas as fontes',
+                                    isSelected: _sourceId == null,
+                                    icon: Icons.rss_feed_rounded,
                                   ),
                                   for (final source in _sources)
-                                    PopupMenuItem(
+                                    _buildPopupItem(
                                       value: source.id,
-                                      child: Text(source.title),
+                                      label: source.title,
+                                      isSelected: _sourceId == source.id,
+                                      icon: Icons.radio_button_checked_rounded,
                                     ),
                                 ],
                                 child: _filterPill(
                                   sources[_sourceId]?.title ??
                                       'Todas as fontes',
                                   Icons.rss_feed_rounded,
+                                  isActive: _sourceId != null,
                                 ),
                               ),
                               Text(
@@ -399,29 +495,101 @@ class _NewsPageState extends State<NewsPage> {
     },
   );
 
-  Widget _filterPill(String text, IconData icon) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+  PopupMenuItem<String> _buildPopupItem({
+    required String value,
+    required String label,
+    required bool isSelected,
+    IconData? icon,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 42,
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(
+              icon,
+              size: 17,
+              color: isSelected
+                  ? FeedFlowColors.primary
+                  : FeedFlowColors.textSecondary,
+            ),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                color: isSelected
+                    ? FeedFlowColors.primary
+                    : FeedFlowColors.textPrimary,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(
+              Icons.check_rounded,
+              size: 16,
+              color: FeedFlowColors.primary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _filterPill(
+    String text,
+    IconData icon, {
+    bool isActive = false,
+  }) => AnimatedContainer(
+    duration: const Duration(milliseconds: 180),
+    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
     decoration: BoxDecoration(
-      color: FeedFlowColors.surface,
-      borderRadius: BorderRadius.circular(30),
-      border: Border.all(color: FeedFlowColors.divider),
+      color: isActive
+          ? FeedFlowColors.primary.withValues(alpha: 0.14)
+          : FeedFlowColors.surfaceElevated,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: isActive
+            ? FeedFlowColors.primary.withValues(alpha: 0.8)
+            : FeedFlowColors.divider.withValues(alpha: 0.7),
+        width: isActive ? 1.0 : 0.8,
+      ),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 15, color: FeedFlowColors.secondary),
-        const SizedBox(width: 7),
+        Icon(
+          icon,
+          size: 14,
+          color: isActive ? FeedFlowColors.primary : FeedFlowColors.secondary,
+        ),
+        const SizedBox(width: 6),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 160),
           child: Text(
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+              color: isActive
+                  ? FeedFlowColors.primary
+                  : FeedFlowColors.textPrimary,
+            ),
           ),
         ),
-        const SizedBox(width: 5),
-        const Icon(Icons.expand_more_rounded, size: 15),
+        const SizedBox(width: 4),
+        Icon(
+          Icons.expand_more_rounded,
+          size: 14,
+          color: isActive
+              ? FeedFlowColors.primary
+              : FeedFlowColors.textDisabled,
+        ),
       ],
     ),
   );
