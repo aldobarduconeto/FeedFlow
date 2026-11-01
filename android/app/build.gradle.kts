@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.awesome.feedflow"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
