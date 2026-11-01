@@ -1,0 +1,189 @@
+name: FeedFlow - Multi-Platform Build & Release
+
+on:
+  push:
+    tags:
+      - 'v1.0.0'
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------
+  # 1. Android (APK)
+  # ------------------------------------------------------
+  build-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Build do APK
+        run: flutter build apk --release
+
+      - name: Renomear APK
+        run: mv build/app/outputs/flutter-apk/app-release.apk build/app/outputs/flutter-apk/FeedFlow.apk
+
+      - name: Upload do Artefato Android
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeedFlow-Android
+          path: build/app/outputs/flutter-apk/FeedFlow.apk
+
+  # ------------------------------------------------------
+  # 2. Windows Executável & Instalador .exe (Inno Setup)
+  # ------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Build do Windows
+        run: flutter build windows --release
+
+      - name: Baixar e Instalar Inno Setup
+        run: choco install innosetup -y
+
+      - name: Gerar Instalador EXE (Inno Setup)
+        shell: powershell
+        run: |
+          $tagVersion = "${{ github.ref_name }}".TrimStart('v')
+          if (-not $tagVersion) { $tagVersion = "1.0.0" }
+
+          $issContent = @"
+          [Setup]
+          AppName=FeedFlow
+          AppVersion=$tagVersion
+          DefaultDirName={autopf}\FeedFlow
+          DefaultGroupName=FeedFlow
+          OutputDir=.
+          OutputBaseFilename=FeedFlow-Setup
+          Compression=lzma
+          SolidCompression=yes
+          [Files]
+          Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+          [Icons]
+          Name: "{group}\FeedFlow"; Filename: "{app}\FeedFlow.exe"
+          "@
+          Set-Content -Path setup.iss -Value $issContent
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" setup.iss
+
+      - name: Upload do Instalador EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeedFlow-Windows-Setup
+          path: FeedFlow-Setup.exe
+
+  # ------------------------------------------------------
+  # 3. macOS (.dmg) e iOS (.ipa)
+  # ------------------------------------------------------
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Instalar Ferramenta create-dmg
+        run: brew install create-dmg
+
+      - name: Build para macOS
+        run: flutter build macos --release
+
+      - name: Criar imagem DMG para macOS
+        run: |
+          APP_PATH=$(find build/macos/Build/Products/Release -name "*.app" -maxdepth 1 | head -n 1)
+          APP_NAME=$(basename "$APP_PATH")
+
+          create-dmg \
+            --volname "FeedFlow Installer" \
+            --window-pos 200 120 \
+            --window-size 800 400 \
+            --icon-size 100 \
+            --icon "$APP_NAME" 200 190 \
+            --hide-extension "$APP_NAME" \
+            --app-drop-link 600 190 \
+            "FeedFlow.dmg" \
+            "$APP_PATH" || true
+
+      # --- BUILD IOS (.IPA) ---
+      - name: Build para iOS (Sem assinatura)
+        run: flutter build ios --release --no-codesign
+
+      - name: Empacotar estrutura Payload para gerar .IPA
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/FeedFlow.app
+          zip -r FeedFlow.ipa Payload
+
+      - name: Upload dos Artefatos Apple
+        uses: actions/upload-artifact@v4
+        with:
+          name: FeedFlow-Apple
+          path: |
+            FeedFlow.dmg
+            FeedFlow.ipa
+
+  # ------------------------------------------------------
+  # 4. Publicação na Release
+  # ------------------------------------------------------
+  publish-release:
+    needs: [build-ubuntu, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Baixar todos os artefatos
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Organizar arquivos com nome FeedFlow
+        run: |
+          mkdir -p release_assets
+          cp artifacts/FeedFlow-Android/FeedFlow.apk release_assets/FeedFlow.apk || true
+          cp artifacts/FeedFlow-Windows-Setup/FeedFlow-Setup.exe release_assets/FeedFlow-Setup.exe || true
+          cp artifacts/FeedFlow-Apple/FeedFlow.dmg release_assets/FeedFlow.dmg || true
+          cp artifacts/FeedFlow-Apple/FeedFlow.ipa release_assets/FeedFlow.ipa || true
+
+      - name: Criar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Release ${{ github.ref_name }}"
+          files: release_assets/*
+          generate_release_notes: true
+          overwrite: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
