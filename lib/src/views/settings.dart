@@ -990,22 +990,42 @@ class _SettingsPageState extends State<SettingsPage> {
                       ListTile(
                         leading: const Icon(Icons.send_rounded),
                         title: const Text('Testar notificação de notícia'),
-                        subtitle: const Text('Exibe exemplo com título e publisher'),
+                        subtitle: const Text('Dispara notificação nativa no sistema e in-app'),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          widget.notificationService
+                        onTap: () async {
+                          await widget.notificationService
                               ?.sendTestNotification(isPodcast: false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Notificação de notícia enviada para o sistema!',
+                                ),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         },
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       ListTile(
                         leading: const Icon(Icons.send_rounded),
                         title: const Text('Testar notificação de podcast'),
-                        subtitle: const Text('Exibe exemplo de novo episódio'),
+                        subtitle: const Text('Dispara notificação nativa de novo episódio'),
                         trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () {
-                          widget.notificationService
+                        onTap: () async {
+                          await widget.notificationService
                               ?.sendTestNotification(isPodcast: true);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Notificação de podcast enviada para o sistema!',
+                                ),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         },
                       ),
                       const Divider(height: 1, indent: 16, endIndent: 16),
@@ -1013,7 +1033,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         leading: const Icon(Icons.security_rounded),
                         title: const Text('Permissões do aplicativo'),
                         subtitle: const Text(
-                          'Rever permissões do sistema (notificações e áudio)',
+                          'Rever permissões do sistema (notificações, mídia e segundo plano)',
                         ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: () {
@@ -1024,6 +1044,18 @@ class _SettingsPageState extends State<SettingsPage> {
                               onCompleted: () => Navigator.pop(context),
                             ),
                           );
+                        },
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      ListTile(
+                        leading: const Icon(Icons.settings_applications_rounded),
+                        title: const Text('Configurações do sistema operacional'),
+                        subtitle: const Text(
+                          'Acessar detalhes e gerenciar permissões no Android/iOS',
+                        ),
+                        trailing: const Icon(Icons.open_in_new_rounded, size: 18),
+                        onTap: () async {
+                          await PermissionService().openSettings();
                         },
                       ),
                     ],

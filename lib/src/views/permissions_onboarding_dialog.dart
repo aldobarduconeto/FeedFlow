@@ -21,16 +21,42 @@ class PermissionsOnboardingDialog extends StatefulWidget {
 class _PermissionsOnboardingDialogState
     extends State<PermissionsOnboardingDialog> {
   bool _isRequesting = false;
+  Map<String, bool> _statuses = {
+    'notification': false,
+    'storage': false,
+    'audio': false,
+    'batteryOptimization': false,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    _checkInitialStatuses();
+  }
+
+  Future<void> _checkInitialStatuses() async {
+    final res = await widget.permissionService.checkAllPermissions();
+    if (mounted) {
+      setState(() => _statuses = res);
+    }
+  }
 
   Future<void> _grantPermissions() async {
     setState(() => _isRequesting = true);
     try {
-      await widget.permissionService.requestAllPermissions();
+      final results = await widget.permissionService.requestAllPermissions();
+      if (mounted) {
+        setState(() => _statuses = results);
+      }
     } finally {
       if (mounted) {
         widget.onCompleted();
       }
     }
+  }
+
+  Future<void> _openAppSettings() async {
+    await widget.permissionService.openSettings();
   }
 
   Future<void> _skip() async {
@@ -42,6 +68,11 @@ class _PermissionsOnboardingDialogState
 
   @override
   Widget build(BuildContext context) {
+    final bool notifGranted = _statuses['notification'] ?? false;
+    final bool storageGranted =
+        (_statuses['storage'] ?? false) || (_statuses['audio'] ?? false);
+    final bool batteryGranted = _statuses['batteryOptimization'] ?? false;
+
     return Dialog(
       backgroundColor: FeedFlowColors.surfaceElevated,
       elevation: 16,
@@ -93,7 +124,7 @@ class _PermissionsOnboardingDialogState
               ),
               const SizedBox(height: 18),
               Text(
-                'Bem-vindo ao FeedFlow',
+                'Permissões do FeedFlow',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 22,
@@ -104,7 +135,7 @@ class _PermissionsOnboardingDialogState
               ),
               const SizedBox(height: 6),
               Text(
-                'Para oferecer a melhor experiência com notícias e podcasts, precisamos de algumas permissões do seu dispositivo:',
+                'Para sincronizar conteúdos, alertar novas publicações e reproduzir áudio em segundo plano com excelência, solicitamos autorização aos seguintes recursos do sistema:',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13.5,
@@ -118,30 +149,32 @@ class _PermissionsOnboardingDialogState
               _permissionCard(
                 icon: Icons.notifications_active_rounded,
                 iconColor: FeedFlowColors.primary,
-                title: 'Notificações de Publicações',
+                title: 'Notificações do Sistema',
                 description:
-                    'Avisa imediatamente quando uma notícia ou episódio for publicado, com o título e publisher.',
-                badge: 'Importante',
+                    'Receba alertas em tempo real quando suas fontes publicarem novas notícias ou podcasts com título e publisher.',
+                isGranted: notifGranted,
               ),
               const SizedBox(height: 10),
 
-              // Card 2: Áudio e Mídia
+              // Card 2: Áudio e Armazenamento
               _permissionCard(
                 icon: Icons.headphones_rounded,
                 iconColor: FeedFlowColors.secondary,
-                title: 'Áudio em Segundo Plano',
+                title: 'Mídia e Armazenamento Offline',
                 description:
-                    'Reproduz podcasts com a tela desligada ou enquanto você utiliza outros aplicativos.',
+                    'Permite baixar e armazenar episódios de podcasts e capas de artigos para consumo rápido sem internet.',
+                isGranted: storageGranted,
               ),
               const SizedBox(height: 10),
 
-              // Card 3: Armazenamento e Offline
+              // Card 3: Execução em Segundo Plano
               _permissionCard(
-                icon: Icons.download_for_offline_rounded,
+                icon: Icons.battery_charging_full_rounded,
                 iconColor: FeedFlowColors.accent,
-                title: 'Downloads e Armazenamento',
+                title: 'Áudio Contínuo em Segundo Plano',
                 description:
-                    'Permite baixar episódios completos de podcasts para ouvir quando estiver offline.',
+                    'Evita que o sistema encerre o podcast quando a tela estiver bloqueada ou em economia de bateria.',
+                isGranted: batteryGranted,
               ),
               const SizedBox(height: 26),
 
@@ -165,27 +198,40 @@ class _PermissionsOnboardingDialogState
                         ),
                       )
                     : const Text(
-                        'Conceder permissões e continuar',
+                        'Conceder todas as permissões',
                         style: TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
               ),
-              const SizedBox(height: 10),
-              TextButton(
-                onPressed: _isRequesting ? null : _skip,
-                style: TextButton.styleFrom(
-                  foregroundColor: FeedFlowColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton.icon(
+                    onPressed: _isRequesting ? null : _openAppSettings,
+                    icon: const Icon(Icons.settings_outlined, size: 16),
+                    label: const Text(
+                      'Configurações do sistema',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                    style: TextButton.styleFrom(
+                      foregroundColor: FeedFlowColors.textSecondary,
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Agora não / Continuar depois',
-                  style: TextStyle(fontSize: 13),
-                ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: _isRequesting ? null : _skip,
+                    style: TextButton.styleFrom(
+                      foregroundColor: FeedFlowColors.textSecondary,
+                    ),
+                    child: const Text(
+                      'Pular / Mais tarde',
+                      style: TextStyle(fontSize: 12.5),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -199,7 +245,7 @@ class _PermissionsOnboardingDialogState
     required Color iconColor,
     required String title,
     required String description,
-    String? badge,
+    required bool isGranted,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -207,7 +253,9 @@ class _PermissionsOnboardingDialogState
         color: FeedFlowColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: FeedFlowColors.divider.withValues(alpha: 0.6),
+          color: isGranted
+              ? Colors.green.withValues(alpha: 0.4)
+              : FeedFlowColors.divider.withValues(alpha: 0.6),
           width: 0.8,
         ),
       ),
@@ -218,10 +266,15 @@ class _PermissionsOnboardingDialogState
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: iconColor.withValues(alpha: 0.14),
+              color: (isGranted ? Colors.green : iconColor)
+                  .withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(
+              isGranted ? Icons.check_circle_rounded : icon,
+              color: isGranted ? Colors.green : iconColor,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -240,25 +293,26 @@ class _PermissionsOnboardingDialogState
                         ),
                       ),
                     ),
-                    if (badge != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: iconColor.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          badge,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            color: iconColor,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isGranted
+                            ? Colors.green.withValues(alpha: 0.15)
+                            : iconColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isGranted ? 'Concedido' : 'Solicitar',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: isGranted ? Colors.green : iconColor,
                         ),
                       ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 3),

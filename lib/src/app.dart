@@ -41,6 +41,7 @@ class _AppState extends State<App> {
   DiscoveryService? _discoveryService;
   NotificationService? _notificationService;
   StreamSubscription<FeedNotification>? _notificationSubscription;
+  StreamSubscription<FeedNotification>? _systemNotificationSubscription;
   FeedNotification? _activeInAppNotification;
   final PermissionService _permissionService = PermissionService();
   bool _showPermissionsOnboarding = false;
@@ -88,6 +89,13 @@ class _AppState extends State<App> {
           setState(() {
             _activeInAppNotification = notif;
           });
+        }
+      });
+
+      _systemNotificationSubscription =
+          notificationService.onSystemNotificationTapped.listen((notif) {
+        if (mounted) {
+          _handleNotificationTap(notif);
         }
       });
 
@@ -259,6 +267,7 @@ class _AppState extends State<App> {
     AppearanceService.instance.removeListener(_appearanceChanged);
     HardwareKeyboard.instance.removeHandler(_handleGlobalKeyEvent);
     _notificationSubscription?.cancel();
+    _systemNotificationSubscription?.cancel();
     _notificationService?.dispose();
     _podcastPlayer?.dispose();
     _suggestionService?.dispose();
